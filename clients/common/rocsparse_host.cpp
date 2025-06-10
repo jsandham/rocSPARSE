@@ -4100,6 +4100,46 @@ void host_bsrgemm(rocsparse_direction  dir,
         return;
     }
 
+    std::cout << "A" << std::endl;
+    for(int i = 0; i < Mb; i++)
+    {
+        int start = bsr_row_ptr_A[i] - base_A;
+        int end   = bsr_row_ptr_A[i + 1] - base_A;
+
+        std::vector<T> temp(Kb, 0);
+        for(int j = start; j < end; j++)
+        {
+            temp[bsr_col_ind_A[j] - base_A] = static_cast<T>(1);
+        }
+
+        for(int j = 0; j < Kb; j++)
+        {
+            std::cout << temp[j] << " ";
+        }
+        std::cout << "" << std::endl;
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "B" << std::endl;
+    for(int i = 0; i < Kb; i++)
+    {
+        int start = bsr_row_ptr_B[i] - base_B;
+        int end   = bsr_row_ptr_B[i + 1] - base_B;
+
+        std::vector<T> temp(Nb, 0);
+        for(int j = start; j < end; j++)
+        {
+            temp[bsr_col_ind_B[j] - base_B] = static_cast<T>(1);
+        }
+
+        for(int j = 0; j < Nb; j++)
+        {
+            std::cout << temp[j] << " ";
+        }
+        std::cout << "" << std::endl;
+    }
+    std::cout << "" << std::endl;
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -4320,6 +4360,8 @@ void host_bsrgemm(rocsparse_direction  dir,
     }
 
     I nnzb = bsr_row_ptr_C[Mb] - base_C;
+
+    std::cout << "nnzb: " << nnzb << std::endl;
 
     std::vector<J> col(nnzb);
     std::vector<T> val(block_dim * block_dim * nnzb);
@@ -4645,8 +4687,8 @@ void host_csrgeam_nnz(J                    M,
         int nthreads = omp_get_num_threads();
         int tid      = omp_get_thread_num();
 #else
-        int           nthreads = 1;
-        int           tid      = 0;
+        int nthreads = 1;
+        int tid      = 0;
 #endif
 
         J rows_per_thread = (M + nthreads - 1) / nthreads;
@@ -4739,8 +4781,8 @@ void host_csrgeam(J                    M,
         int nthreads = omp_get_num_threads();
         int tid      = omp_get_thread_num();
 #else
-        int           nthreads = 1;
-        int           tid      = 0;
+        int nthreads = 1;
+        int tid      = 0;
 #endif
 
         J rows_per_thread = (M + nthreads - 1) / nthreads;
