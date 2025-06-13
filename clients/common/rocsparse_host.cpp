@@ -4140,6 +4140,13 @@ void host_bsrgemm(rocsparse_direction  dir,
     }
     std::cout << "" << std::endl;
 
+    std::cout << "bsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < Mb + 1; i++)
+    {
+        std::cout << bsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -4413,6 +4420,26 @@ void host_bsrgemm(rocsparse_direction  dir,
             }
         }
     }
+
+    std::cout << "C" << std::endl;
+    for(int i = 0; i < Mb; i++)
+    {
+        int start = bsr_row_ptr_C[i] - base_C;
+        int end   = bsr_row_ptr_C[i + 1] - base_C;
+
+        std::vector<T> temp(Nb, 0);
+        for(int j = start; j < end; j++)
+        {
+            temp[bsr_col_ind_C[j] - base_C] = static_cast<T>(1);
+        }
+
+        for(int j = 0; j < Nb; j++)
+        {
+            std::cout << temp[j] << " ";
+        }
+        std::cout << "" << std::endl;
+    }
+    std::cout << "" << std::endl;
 }
 
 template <typename T>

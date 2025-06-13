@@ -499,6 +499,11 @@ void testing_bsrgemm(const Arguments& arg)
 
     matrix_factory.init_bsr(h_A, d_A, Mb, Kb, baseA);
 
+    std::cout << "h_A.ptr.size(): " << h_A.ptr.size() << " Mb: " << Mb << " Kb: " << Kb
+              << std::endl;
+    std::cout << "h_A.ind.size(): " << h_A.ind.size() << std::endl;
+    std::cout << "h_A.val.size(): " << h_A.val.size() << std::endl;
+
     M = Mb * d_A.row_block_dim;
     K = Kb * d_A.col_block_dim;
 
@@ -581,6 +586,8 @@ void testing_bsrgemm(const Arguments& arg)
     }
 
     h_C.define(dir, Mb, Nb, 0, block_dim, block_dim, baseC);
+
+    std::cout << "h_C.ptr.size(): " << h_C.ptr.size() << std::endl;
 
     // Declare device objects.
     device_gebsr_matrix<T> d_B(h_B), d_C(h_C), d_D(h_D);
