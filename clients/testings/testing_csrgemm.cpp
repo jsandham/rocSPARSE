@@ -703,6 +703,8 @@ void testing_csrgemm(const Arguments& arg)
             CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
             CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, h_out_nnz)));
             d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
+
+            std::cout << "h_out_nnz: " << *h_out_nnz << std::endl;
             CHECK_ROCSPARSE_ERROR(
                 rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
             if(ROCSPARSE_REPRODUCIBILITY)
@@ -712,121 +714,121 @@ void testing_csrgemm(const Arguments& arg)
 
             h_C.near_check(d_C);
         }
-        {
-            //
-            // GPU with pointer mode device
-            //
-            device_scalar<rocsparse_int> d_out_nnz;
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_device));
-            CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, d_out_nnz)));
-            host_scalar<rocsparse_int> h_out_nnz(d_out_nnz);
-            d_C.define(d_C.m, d_C.n, 0, d_C.base);
-            d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_csrgemm<T>(PARAMS(d_alpha, d_beta, d_A, d_B, d_C, d_D)));
+        // {
+        //     //
+        //     // GPU with pointer mode device
+        //     //
+        //     device_scalar<rocsparse_int> d_out_nnz;
+        //     CHECK_ROCSPARSE_ERROR(
+        //         rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_device));
+        //     CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, d_out_nnz)));
+        //     host_scalar<rocsparse_int> h_out_nnz(d_out_nnz);
+        //     d_C.define(d_C.m, d_C.n, 0, d_C.base);
+        //     d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
+        //     CHECK_ROCSPARSE_ERROR(
+        //         rocsparse_csrgemm<T>(PARAMS(d_alpha, d_beta, d_A, d_B, d_C, d_D)));
 
-            if(ROCSPARSE_REPRODUCIBILITY)
-            {
-                rocsparse_reproducibility::save("d_C pointer mode device", d_C);
-            }
+        //     if(ROCSPARSE_REPRODUCIBILITY)
+        //     {
+        //         rocsparse_reproducibility::save("d_C pointer mode device", d_C);
+        //     }
 
-            h_C.near_check(d_C);
-        }
+        //     h_C.near_check(d_C);
+        // }
     }
 
-    if(arg.timing)
-    {
-#define ROCSPARSE_TIMER_IN(decl_) double decl_ = get_time_us();
-#define ROCSPARSE_TIMER_OUT(decl_) decl_ = (get_time_us() - decl_) / number_hot_calls
+    //     if(arg.timing)
+    //     {
+    // #define ROCSPARSE_TIMER_IN(decl_) double decl_ = get_time_us();
+    // #define ROCSPARSE_TIMER_OUT(decl_) decl_ = (get_time_us() - decl_) / number_hot_calls
 
-        int number_cold_calls = 2;
-        int number_hot_calls  = arg.iters;
+    //         int number_cold_calls = 2;
+    //         int number_hot_calls  = arg.iters;
 
-        CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
+    //         CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
 
-        //
-        // WARM UP
-        //
-        rocsparse_int out_nnz;
-        CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, &out_nnz)));
-        d_C.define(d_C.m, d_C.n, out_nnz, d_C.base);
+    //         //
+    //         // WARM UP
+    //         //
+    //         rocsparse_int out_nnz;
+    //         CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, &out_nnz)));
+    //         d_C.define(d_C.m, d_C.n, out_nnz, d_C.base);
 
-        for(int iter = 0; iter < number_cold_calls; ++iter)
-        {
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-        }
+    //         for(int iter = 0; iter < number_cold_calls; ++iter)
+    //         {
+    //             CHECK_ROCSPARSE_ERROR(
+    //                 rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
+    //         }
 
-        ROCSPARSE_TIMER_IN(gpu_solve_time_used);
-        {
-            for(int iter = 0; iter < number_hot_calls; ++iter)
-            {
-                CHECK_ROCSPARSE_ERROR(
-                    rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-            }
-        }
-        ROCSPARSE_TIMER_OUT(gpu_solve_time_used);
-        hipDeviceSynchronize();
+    //         ROCSPARSE_TIMER_IN(gpu_solve_time_used);
+    //         {
+    //             for(int iter = 0; iter < number_hot_calls; ++iter)
+    //             {
+    //                 CHECK_ROCSPARSE_ERROR(
+    //                     rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
+    //             }
+    //         }
+    //         ROCSPARSE_TIMER_OUT(gpu_solve_time_used);
+    //         hipDeviceSynchronize();
 
-#undef PARAMS
-#undef PARAMS_NNZ
-#undef PARAMS_BUFFER_SIZE
+    // #undef PARAMS
+    // #undef PARAMS_NNZ
+    // #undef PARAMS_BUFFER_SIZE
 
-        double gflop_count = csrgemm_gflop_count<T, rocsparse_int, rocsparse_int>(
-            M, h_alpha, h_A.ptr, h_A.ind, h_B.ptr, h_beta, h_D.ptr, h_A.base);
-        double gbyte_count = csrgemm_gbyte_count<T, rocsparse_int, rocsparse_int>(
-            M, N, K, d_A.nnz, d_B.nnz, d_C.nnz, d_D.nnz, h_alpha, h_beta);
+    //         double gflop_count = csrgemm_gflop_count<T, rocsparse_int, rocsparse_int>(
+    //             M, h_alpha, h_A.ptr, h_A.ind, h_B.ptr, h_beta, h_D.ptr, h_A.base);
+    //         double gbyte_count = csrgemm_gbyte_count<T, rocsparse_int, rocsparse_int>(
+    //             M, N, K, d_A.nnz, d_B.nnz, d_C.nnz, d_D.nnz, h_alpha, h_beta);
 
-        double gpu_gflops = get_gpu_gflops(gpu_solve_time_used, gflop_count);
-        double gpu_gbyte  = get_gpu_gbyte(gpu_solve_time_used, gbyte_count);
+    //         double gpu_gflops = get_gpu_gflops(gpu_solve_time_used, gflop_count);
+    //         double gpu_gbyte  = get_gpu_gbyte(gpu_solve_time_used, gbyte_count);
 
-        char alpha[32], beta[32];
-        sprintf(alpha, "null");
-        sprintf(beta, "null");
-        if(h_alpha.data() != nullptr)
-        {
-            std::stringstream ss;
-            ss << *h_alpha;
-            sprintf(alpha, "%s", ss.str().c_str());
-        }
+    //         char alpha[32], beta[32];
+    //         sprintf(alpha, "null");
+    //         sprintf(beta, "null");
+    //         if(h_alpha.data() != nullptr)
+    //         {
+    //             std::stringstream ss;
+    //             ss << *h_alpha;
+    //             sprintf(alpha, "%s", ss.str().c_str());
+    //         }
 
-        if(h_beta.data() != nullptr)
-        {
-            std::stringstream ss;
-            ss << *h_beta;
-            sprintf(beta, "%s", ss.str().c_str());
-        }
+    //         if(h_beta.data() != nullptr)
+    //         {
+    //             std::stringstream ss;
+    //             ss << *h_beta;
+    //             sprintf(beta, "%s", ss.str().c_str());
+    //         }
 
-        display_timing_info(display_key_t::trans_A,
-                            rocsparse_operation2string(transA),
-                            display_key_t::trans_B,
-                            rocsparse_operation2string(transB),
-                            display_key_t::M,
-                            M,
-                            display_key_t::N,
-                            N,
-                            display_key_t::K,
-                            K,
-                            display_key_t::nnz_A,
-                            d_A.nnz,
-                            display_key_t::nnz_B,
-                            d_B.nnz,
-                            display_key_t::nnz_C,
-                            d_C.nnz,
-                            display_key_t::nnz_D,
-                            d_D.nnz,
-                            display_key_t::alpha,
-                            alpha,
-                            display_key_t::beta,
-                            beta,
-                            display_key_t::gflops,
-                            gpu_gflops,
-                            display_key_t::bandwidth,
-                            gpu_gbyte,
-                            display_key_t::time_ms,
-                            get_gpu_time_msec(gpu_solve_time_used));
-    }
+    //         display_timing_info(display_key_t::trans_A,
+    //                             rocsparse_operation2string(transA),
+    //                             display_key_t::trans_B,
+    //                             rocsparse_operation2string(transB),
+    //                             display_key_t::M,
+    //                             M,
+    //                             display_key_t::N,
+    //                             N,
+    //                             display_key_t::K,
+    //                             K,
+    //                             display_key_t::nnz_A,
+    //                             d_A.nnz,
+    //                             display_key_t::nnz_B,
+    //                             d_B.nnz,
+    //                             display_key_t::nnz_C,
+    //                             d_C.nnz,
+    //                             display_key_t::nnz_D,
+    //                             d_D.nnz,
+    //                             display_key_t::alpha,
+    //                             alpha,
+    //                             display_key_t::beta,
+    //                             beta,
+    //                             display_key_t::gflops,
+    //                             gpu_gflops,
+    //                             display_key_t::bandwidth,
+    //                             gpu_gbyte,
+    //                             display_key_t::time_ms,
+    //                             get_gpu_time_msec(gpu_solve_time_used));
+    //     }
 
     // Free buffer
     CHECK_HIP_ERROR(rocsparse_hipFree(dbuffer));

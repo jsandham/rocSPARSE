@@ -106,7 +106,7 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
     std::vector<I> hcsr_row_ptr_C(m + 1, 0);
     RETURN_IF_HIP_ERROR(hipMemcpy(
         hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
-    std::cout << "hcsr_row_ptr_C" << std::endl;
+    std::cout << "csrgemm_intermediate_products hcsr_row_ptr_C" << std::endl;
     for(int i = 0; i < m + 1; i++)
     {
         std::cout << hcsr_row_ptr_C[i] << " ";
@@ -563,6 +563,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         // Adjust nnz by index base
         *nnz_C -= descr_C->base;
     }
+
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     return rocsparse_status_success;
 }
