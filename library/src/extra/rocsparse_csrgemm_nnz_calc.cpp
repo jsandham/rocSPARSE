@@ -31,6 +31,8 @@
 
 #include "rocsparse_primitives.h"
 
+#include <vector>
+
 template <typename I, typename J>
 rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
                                              rocsparse_operation       trans_A,
