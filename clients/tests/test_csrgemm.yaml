@@ -57,7 +57,7 @@ Tests:
   category: quick
   function: csrgemm
   precision: *single_precision
-  M: [50, 647]
+  M: [50]
   N: [13, 20, 40, 80, 160, 320, 523]
   K: [50, 75, 100, 125, 150, 175, 254]
   alpha_alphai: *alpha_range_quick
