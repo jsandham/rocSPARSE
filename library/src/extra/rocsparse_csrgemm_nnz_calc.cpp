@@ -1,6 +1,6 @@
 /*! \file */
 /* ************************************************************************
- * Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights Reserved.
+ * Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,6 +56,7 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
                                              const rocsparse_mat_info  info_C,
                                              void*                     temp_buffer)
 {
+    std::cout << "csrgemm_nnz_calc" << std::endl;
     // Stream
     hipStream_t stream = handle->stream;
 
@@ -99,6 +100,18 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
 
+    RETURN_IF_HIP_ERROR(hipStreamSynchronize(stream));
+    std::vector<I> hcsr_row_ptr_C(m + 1, 0);
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+    std::cout << "2222" << std::endl;
+
     // Determine maximum of all intermediate products
     RETURN_IF_ROCSPARSE_ERROR(
         (rocsparse::primitives::find_max_buffer_size<I, I>(handle, m, &rocprim_size)));
@@ -111,6 +124,8 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         hipMemcpyAsync(&int_max, csr_row_ptr_C + m, sizeof(I), hipMemcpyDeviceToHost, stream));
     // Wait for host transfer to finish
     RETURN_IF_HIP_ERROR(hipStreamSynchronize(stream));
+
+    std::cout << "int_max: " << int_max << std::endl;
 
     // Group offset buffer
     J* d_group_offset = reinterpret_cast<J*>(buffer);
@@ -211,6 +226,13 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         h_group_size[0] = m;
         RETURN_IF_HIP_ERROR(hipMemsetAsync(d_group_offset, 0, sizeof(J), stream));
     }
+
+    std::cout << "h_group_size" << std::endl;
+    for(int i = 0; i < CSRGEMM_MAXGROUPS; i++)
+    {
+        std::cout << h_group_size[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     // Compute non-zero entries per row for each group
 

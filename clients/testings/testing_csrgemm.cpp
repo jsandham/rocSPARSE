@@ -1,6 +1,6 @@
 /*! \file */
 /* ************************************************************************
- * Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights Reserved.
+ * Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -622,6 +622,8 @@ void testing_csrgemm(const Arguments& arg)
     CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_buffer_size<T>(
         PARAMS_BUFFER_SIZE(h_alpha, h_beta, d_A, d_B, d_C, d_D, out_buffer_size)));
 
+    std::cout << "out_buffer_size: " << out_buffer_size << std::endl;
+
     CHECK_HIP_ERROR(rocsparse_hipMalloc(&dbuffer, out_buffer_size));
 
     if(arg.unit_check)
@@ -650,6 +652,8 @@ void testing_csrgemm(const Arguments& arg)
                                                               h_C.base,
                                                               h_D.base);
 
+            std::cout << "host out_nnz: " << out_nnz << std::endl;
+
             h_C.define(h_C.m, h_C.n, out_nnz, h_C.base);
 
             host_csrgemm<T, rocsparse_int, rocsparse_int>(h_A.m,
@@ -673,6 +677,22 @@ void testing_csrgemm(const Arguments& arg)
                                                           h_B.base,
                                                           h_C.base,
                                                           h_D.base);
+
+            std::cout << "h_C.m: " << h_C.m << " h_C.n: " << h_C.n << " h_C.nnz: " << h_C.nnz
+                      << std::endl;
+            std::cout << "h_C.ptr" << std::endl;
+            for(int i = 0; i < h_C.m + 1; i++)
+            {
+                std::cout << h_C.ptr[i] << " ";
+            }
+            std::cout << "" << std::endl;
+
+            std::cout << "h_C.ind" << std::endl;
+            for(int i = 0; i < h_C.nnz; i++)
+            {
+                std::cout << h_C.ind[i] << " ";
+            }
+            std::cout << "" << std::endl;
         }
 
         {

@@ -1,6 +1,6 @@
 /*! \file */
 /* ************************************************************************
- * Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights Reserved.
+ * Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -484,6 +484,7 @@ rocsparse_status rocsparse::csrgemm_nnz_core(rocsparse_handle          handle,
 {
     const bool mul = info_C->csrgemm_info->mul;
     const bool add = info_C->csrgemm_info->add;
+    std::cout << "mul: " << mul << " add: " << add << std::endl;
     // Either mult, add or multadd need to be performed
     if(mul == true && add == true)
     {
