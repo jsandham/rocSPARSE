@@ -1,6 +1,6 @@
 /*! \file */
 /* ************************************************************************
- * Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights Reserved.
+ * Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -530,85 +530,163 @@ void testing_csrgemm(const Arguments& arg)
     //
     host_csr_matrix<T> h_A, h_B, h_C, h_D;
 
-    //
-    // Initialize matrices.
-    //
+    // //
+    // // Initialize matrices.
+    // //
+    // {
+    //     rocsparse_matrix_factory<T> matrix_factory(arg, arg.timing ? false : true, full_rank);
+    //     matrix_factory.init_csr(h_A, M, K, baseA);
+    //     switch(scenario)
+    //     {
+    //     case testing_csrgemm_scenario_none:
+    //     {
+    //         break;
+    //     }
+    //     case testing_csrgemm_scenario_alpha:
+    //     {
+    //         rocsparse_matrix_factory_random<T> rf(full_rank);
+    //         {
+    //             h_B.base = baseB;
+    //             h_B.m    = K;
+    //             h_B.n    = N;
+    //             rf.init_csr(h_B.ptr,
+    //                         h_B.ind,
+    //                         h_B.val,
+    //                         h_B.m,
+    //                         h_B.n,
+    //                         h_B.nnz,
+    //                         h_B.base,
+    //                         rocsparse_matrix_type_general,
+    //                         rocsparse_fill_mode_lower,
+    //                         rocsparse_storage_mode_sorted);
+    //         }
+
+    //         break;
+    //     }
+    //     case testing_csrgemm_scenario_beta:
+    //     {
+    //         matrix_factory.init_csr(h_D, M, N, baseD);
+    //         break;
+    //     }
+    //     case testing_csrgemm_scenario_alpha_and_beta:
+    //     {
+    //         rocsparse_matrix_factory_random<T> rf(full_rank);
+    //         {
+    //             h_B.base = baseB;
+    //             h_B.m    = K;
+    //             h_B.n    = N;
+    //             rf.init_csr(h_B.ptr,
+    //                         h_B.ind,
+    //                         h_B.val,
+    //                         h_B.m,
+    //                         h_B.n,
+    //                         h_B.nnz,
+    //                         h_B.base,
+    //                         rocsparse_matrix_type_general,
+    //                         rocsparse_fill_mode_lower,
+    //                         rocsparse_storage_mode_sorted);
+    //         }
+
+    //         {
+    //             h_D.base = baseD;
+    //             h_D.m    = M;
+    //             h_D.n    = N;
+    //             rf.init_csr(h_D.ptr,
+    //                         h_D.ind,
+    //                         h_D.val,
+    //                         h_D.m,
+    //                         h_D.n,
+    //                         h_D.nnz,
+    //                         h_D.base,
+    //                         rocsparse_matrix_type_general,
+    //                         rocsparse_fill_mode_lower,
+    //                         rocsparse_storage_mode_sorted);
+    //         }
+
+    //         break;
+    //     }
+    //     }
+
+    //     h_C.define(M, N, 0, baseC);
+    // }
+
+    h_A.define(M, K, M * K, baseA);
+    h_B.define(K, N, K * N, baseB);
+    h_C.define(M, N, 0, baseC);
+
+    h_A.ptr[0] = 0;
+    for(int i = 0; i < M; i++)
     {
-        rocsparse_matrix_factory<T> matrix_factory(arg, arg.timing ? false : true, full_rank);
-        matrix_factory.init_csr(h_A, M, K, baseA);
-        switch(scenario)
-        {
-        case testing_csrgemm_scenario_none:
-        {
-            break;
-        }
-        case testing_csrgemm_scenario_alpha:
-        {
-            rocsparse_matrix_factory_random<T> rf(full_rank);
-            {
-                h_B.base = baseB;
-                h_B.m    = K;
-                h_B.n    = N;
-                rf.init_csr(h_B.ptr,
-                            h_B.ind,
-                            h_B.val,
-                            h_B.m,
-                            h_B.n,
-                            h_B.nnz,
-                            h_B.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
-
-            break;
-        }
-        case testing_csrgemm_scenario_beta:
-        {
-            matrix_factory.init_csr(h_D, M, N, baseD);
-            break;
-        }
-        case testing_csrgemm_scenario_alpha_and_beta:
-        {
-            rocsparse_matrix_factory_random<T> rf(full_rank);
-            {
-                h_B.base = baseB;
-                h_B.m    = K;
-                h_B.n    = N;
-                rf.init_csr(h_B.ptr,
-                            h_B.ind,
-                            h_B.val,
-                            h_B.m,
-                            h_B.n,
-                            h_B.nnz,
-                            h_B.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
-
-            {
-                h_D.base = baseD;
-                h_D.m    = M;
-                h_D.n    = N;
-                rf.init_csr(h_D.ptr,
-                            h_D.ind,
-                            h_D.val,
-                            h_D.m,
-                            h_D.n,
-                            h_D.nnz,
-                            h_D.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
-
-            break;
-        }
-        }
-
-        h_C.define(M, N, 0, baseC);
+        h_A.ptr[i + 1] = h_A.ptr[i] + K;
     }
+
+    for(int i = 0; i < M; i++)
+    {
+        int start = h_A.ptr[i] - baseA;
+        int end   = h_A.ptr[i + 1] - baseA;
+
+        for(int j = start; j < end; j++)
+        {
+            h_A.ind[j] = j - start + baseA;
+        }
+    }
+
+    h_B.ptr[0] = 0;
+    for(int i = 0; i < K; i++)
+    {
+        h_B.ptr[i + 1] = h_B.ptr[i] + N;
+    }
+
+    for(int i = 0; i < K; i++)
+    {
+        int start = h_B.ptr[i] - baseB;
+        int end   = h_B.ptr[i + 1] - baseB;
+
+        for(int j = start; j < end; j++)
+        {
+            h_B.ind[j] = j - start + baseB;
+        }
+    }
+
+    std::cout << "h_A" << std::endl;
+    for(int i = 0; i < M; i++)
+    {
+        int start = h_A.ptr[i] - baseA;
+        int end   = h_A.ptr[i + 1] - baseA;
+
+        std::vector<T> htemp(K, 0);
+        for(int j = start; j < end; j++)
+        {
+            htemp[h_A.ind[j] - baseA] = 1;
+        }
+
+        for(int j = 0; j < K; j++)
+        {
+            std::cout << htemp[j] << " ";
+        }
+        std::cout << "" << std::endl;
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "h_B" << std::endl;
+    for(int i = 0; i < K; i++)
+    {
+        int start = h_B.ptr[i] - baseB;
+        int end   = h_B.ptr[i + 1] - baseB;
+
+        std::vector<T> htemp(N, 0);
+        for(int j = start; j < end; j++)
+        {
+            htemp[h_B.ind[j] - baseB] = 1;
+        }
+
+        for(int j = 0; j < N; j++)
+        {
+            std::cout << htemp[j] << " ";
+        }
+        std::cout << "" << std::endl;
+    }
+    std::cout << "" << std::endl;
 
     //
     // Declare device objects.

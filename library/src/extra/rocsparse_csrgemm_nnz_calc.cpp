@@ -31,6 +31,8 @@
 
 #include "rocsparse_primitives.h"
 
+#include <vector>
+
 namespace rocsparse
 {
     template <uint32_t HASHSIZE, typename J>
@@ -110,6 +112,16 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
 
+    std::vector<I> hcsr_row_ptr_C(m + 1, 0);
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "After intermediate products hcsr_row_ptr_C" << std::endl;
+    for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Determine maximum of all intermediate products
     RETURN_IF_ROCSPARSE_ERROR(
         (rocsparse::primitives::find_max_buffer_size<I, I>(handle, m, &rocprim_size)));
@@ -136,6 +148,8 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
     // Permutation array
     J* d_perm = nullptr;
 
+    std::cout << "int_max: " << int_max << std::endl;
+
     // If maximum of intermediate products exceeds 32, we process the rows in groups of
     // similar sized intermediate products
     if(int_max > 32)
@@ -143,6 +157,9 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         // Group size buffer
         J* d_group_size = reinterpret_cast<J*>(buffer);
         buffer += sizeof(J) * 256 * CSRGEMM_MAXGROUPS;
+
+        std::cout << "handle->shared_mem_per_block_optin: " << handle->shared_mem_per_block_optin
+                  << std::endl;
 
 #define CSRGEMM_DIM 256
         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
@@ -226,6 +243,34 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         RETURN_IF_HIP_ERROR(hipMemsetAsync(d_group_offset, 0, sizeof(J), stream));
     }
 
+    std::cout << "h_group_size" << std::endl;
+    for(size_t i = 0; i < CSRGEMM_MAXGROUPS; i++)
+    {
+        std::cout << h_group_size[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::vector<J> h_group_offset(CSRGEMM_MAXGROUPS, 0);
+    RETURN_IF_HIP_ERROR(hipMemcpy(h_group_offset.data(),
+                                  d_group_offset,
+                                  sizeof(J) * CSRGEMM_MAXGROUPS,
+                                  hipMemcpyDeviceToHost));
+    std::cout << "h_group_offset" << std::endl;
+    for(size_t i = 0; i < h_group_offset.size(); i++)
+    {
+        std::cout << h_group_offset[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::vector<J> h_perm(m, 0);
+    RETURN_IF_HIP_ERROR(hipMemcpy(h_perm.data(), d_perm, sizeof(J) * m, hipMemcpyDeviceToHost));
+    std::cout << "h_perm" << std::endl;
+    for(size_t i = 0; i < h_perm.size(); i++)
+    {
+        std::cout << h_perm[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Compute non-zero entries per row for each group
 
     // Group 0: 0 - 32 intermediate products
@@ -298,6 +343,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_DIM
     }
 
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "After group 1 hcsr_row_ptr_C" << std::endl;
+    for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Group 2: 65 - 512 intermediate products
     if(h_group_size[2] > 0)
     {
@@ -331,6 +385,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
     }
+
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "After group 2 hcsr_row_ptr_C" << std::endl;
+    for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     // Group 3: 513 - 1024 intermediate products
     if(h_group_size[3] > 0)
@@ -512,6 +575,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_DIM
     }
 
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "After group 7 hcsr_row_ptr_C" << std::endl;
+    for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Group 8: 16385 - 32768 intermediate products
     if(h_group_size[8] > 0)
     {
@@ -603,6 +675,8 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
     // Group 10: more than 65536 intermediate products or shared memory exceeded
     if(h_group_size[10] > 0)
     {
+        std::cout << "// Group 10: more than 65536 intermediate products or shared memory exceeded"
+                  << std::endl;
         // Matrices B and D must be sorted in order to run this path
         if(descr_B->storage_mode == rocsparse_storage_mode_unsorted
            || (info_C->csrgemm_info->add ? descr_D->storage_mode == rocsparse_storage_mode_unsorted
