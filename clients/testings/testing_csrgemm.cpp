@@ -385,7 +385,7 @@ enum testing_csrgemm_scenario
 template <typename T>
 void testing_csrgemm(const Arguments& arg)
 {
-
+    rocsparse_seedrand();
     rocsparse_int         M         = arg.M;
     rocsparse_int         N         = arg.N;
     rocsparse_int         K         = arg.K;
@@ -615,6 +615,36 @@ void testing_csrgemm(const Arguments& arg)
     //
     device_csr_matrix<T>   d_A(h_A), d_B(h_B), d_C(h_C), d_D(h_D);
     device_dense_vector<T> d_alpha(h_alpha), d_beta(h_beta);
+
+    std::cout << "h_A.m: " << h_A.m << " h_A.n: " << h_A.n << " h_A.nnz: " << h_A.nnz << std::endl;
+    std::cout << "h_A.ptr" << std::endl;
+    for(int i = 0; i < h_A.m + 1; i++)
+    {
+        std::cout << h_A.ptr[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "h_A.ind" << std::endl;
+    for(int i = 0; i < h_A.nnz; i++)
+    {
+        std::cout << h_A.ind[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "h_B.m: " << h_B.m << " h_B.n: " << h_B.n << " h_B.nnz: " << h_B.nnz << std::endl;
+    std::cout << "h_B.ptr" << std::endl;
+    for(int i = 0; i < h_B.m + 1; i++)
+    {
+        std::cout << h_B.ptr[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "h_B.ind" << std::endl;
+    for(int i = 0; i < h_B.nnz; i++)
+    {
+        std::cout << h_B.ind[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     // Obtain required buffer size
     size_t out_buffer_size;

@@ -236,6 +236,18 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
     }
     std::cout << "" << std::endl;
 
+    std::vector<J> h_group_offset(CSRGEMM_MAXGROUPS, 0);
+    RETURN_IF_HIP_ERROR(hipMemcpy(h_group_offset.data(),
+                                  d_group_offset,
+                                  sizeof(J) * CSRGEMM_MAXGROUPS,
+                                  hipMemcpyDeviceToHost));
+    std::cout << "h_group_offset" << std::endl;
+    for(int i = 0; i < CSRGEMM_MAXGROUPS; i++)
+    {
+        std::cout << h_group_offset[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Compute non-zero entries per row for each group
 
     // Group 0: 0 - 32 intermediate products
@@ -273,6 +285,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_DIM
     }
 
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "after h_group_size[0] hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Group 1: 33 - 64 intermediate products
     if(h_group_size[1] > 0)
     {
@@ -308,6 +329,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_DIM
     }
 
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "after h_group_size[1] hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
     // Group 2: 65 - 512 intermediate products
     if(h_group_size[2] > 0)
     {
@@ -340,6 +370,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
     }
+
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "after h_group_size[2] hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     // Group 3: 513 - 1024 intermediate products
     if(h_group_size[3] > 0)
@@ -528,6 +567,15 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
     }
+
+    RETURN_IF_HIP_ERROR(hipMemcpy(
+        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
+    std::cout << "before exclusive scan hcsr_row_ptr_C" << std::endl;
+    for(int i = 0; i < m + 1; i++)
+    {
+        std::cout << hcsr_row_ptr_C[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     // Exclusive sum to obtain row pointers of C
     rocprim_buffer = reinterpret_cast<void*>(buffer);
