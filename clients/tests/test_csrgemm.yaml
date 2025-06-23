@@ -52,13 +52,28 @@ Definitions:
     - { beta:  -0.5, betai:  1.0 }
 
 Tests:
+# - name: csrgemm_mult
+#   category: quick
+#   function: csrgemm
+#   precision: *single_only_precisions
+#   M: [300]
+#   N: [500]
+#   K: [30]
+#   alpha_alphai: *alpha_range_quick
+#   beta: [-99.0]
+#   transA: [rocsparse_operation_none]
+#   transB: [rocsparse_operation_none]
+#   baseA: [rocsparse_index_base_zero]
+#   baseB: [rocsparse_index_base_zero]
+#   baseC: [rocsparse_index_base_zero]
+#   matrix: [rocsparse_matrix_random]
 - name: csrgemm_mult
   category: quick
   function: csrgemm
   precision: *single_only_precisions
-  M: [300]
-  N: [500]
-  K: [30]
+  M: [50]
+  N: [523]
+  K: [105]
   alpha_alphai: *alpha_range_quick
   beta: [-99.0]
   transA: [rocsparse_operation_none]
@@ -67,6 +82,9 @@ Tests:
   baseB: [rocsparse_index_base_zero]
   baseC: [rocsparse_index_base_zero]
   matrix: [rocsparse_matrix_random]
+
+
+
 
 # - name: csrgemm_bad_arg
 #   category: pre_checkin

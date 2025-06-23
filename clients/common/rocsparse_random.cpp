@@ -1,6 +1,6 @@
 /*! \file */
 /* ************************************************************************
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights Reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -88,6 +88,7 @@ static double s_rand_normal_array[RANDOM_CACHE_SIZE];
 
 void generate_random_cache()
 {
+    // std::cout << "generate_random_cache rocsparse_rand_uniform_idx: " << rocsparse_rand_uniform_idx << std::endl;
     if(!s_rand_uniform_init)
     {
         for(int i = 0; i < RANDOM_CACHE_SIZE; i++)
@@ -99,6 +100,12 @@ void generate_random_cache()
         if(rocsparse_reproducibility_t::instance().is_enabled())
             rocsparse_seedrand();
     }
+
+    for(int i = 0; i < 10; i++)
+    {
+        std::cout << s_rand_uniform_array[i] << " ";
+    }
+    std::cout << "" << std::endl;
 
     if(!s_rand_normal_init)
     {

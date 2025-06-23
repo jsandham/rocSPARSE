@@ -530,163 +530,205 @@ void testing_csrgemm(const Arguments& arg)
     //
     host_csr_matrix<T> h_A, h_B, h_C, h_D;
 
-    // //
-    // // Initialize matrices.
-    // //
+    //
+    // Initialize matrices.
+    //
+    {
+        rocsparse_matrix_factory<T> matrix_factory(arg, arg.timing ? false : true, full_rank);
+        matrix_factory.init_csr(h_A, M, K, baseA);
+        switch(scenario)
+        {
+        case testing_csrgemm_scenario_none:
+        {
+            break;
+        }
+        case testing_csrgemm_scenario_alpha:
+        {
+            rocsparse_matrix_factory_random<T> rf(full_rank);
+            {
+                h_B.base = baseB;
+                h_B.m    = K;
+                h_B.n    = N;
+                rf.init_csr(h_B.ptr,
+                            h_B.ind,
+                            h_B.val,
+                            h_B.m,
+                            h_B.n,
+                            h_B.nnz,
+                            h_B.base,
+                            rocsparse_matrix_type_general,
+                            rocsparse_fill_mode_lower,
+                            rocsparse_storage_mode_sorted);
+            }
+
+            break;
+        }
+        case testing_csrgemm_scenario_beta:
+        {
+            matrix_factory.init_csr(h_D, M, N, baseD);
+            break;
+        }
+        case testing_csrgemm_scenario_alpha_and_beta:
+        {
+            rocsparse_matrix_factory_random<T> rf(full_rank);
+            {
+                h_B.base = baseB;
+                h_B.m    = K;
+                h_B.n    = N;
+                rf.init_csr(h_B.ptr,
+                            h_B.ind,
+                            h_B.val,
+                            h_B.m,
+                            h_B.n,
+                            h_B.nnz,
+                            h_B.base,
+                            rocsparse_matrix_type_general,
+                            rocsparse_fill_mode_lower,
+                            rocsparse_storage_mode_sorted);
+            }
+
+            {
+                h_D.base = baseD;
+                h_D.m    = M;
+                h_D.n    = N;
+                rf.init_csr(h_D.ptr,
+                            h_D.ind,
+                            h_D.val,
+                            h_D.m,
+                            h_D.n,
+                            h_D.nnz,
+                            h_D.base,
+                            rocsparse_matrix_type_general,
+                            rocsparse_fill_mode_lower,
+                            rocsparse_storage_mode_sorted);
+            }
+
+            break;
+        }
+        }
+
+        h_C.define(M, N, 0, baseC);
+    }
+
+    std::cout << "staring A ptr" << std::endl;
+    for(size_t i = 0; i < h_A.ptr.size(); i++)
+    {
+        std::cout << h_A.ptr[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "staring A ind" << std::endl;
+    for(size_t i = 0; i < h_A.ind.size(); i++)
+    {
+        std::cout << h_A.ind[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "staring A val" << std::endl;
+    for(size_t i = 0; i < std::min(h_A.val.size(), (size_t)10); i++)
+    {
+        std::cout << h_A.val[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "staring B ptr" << std::endl;
+    for(size_t i = 0; i < h_B.ptr.size(); i++)
+    {
+        std::cout << h_B.ptr[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "staring B ind" << std::endl;
+    for(size_t i = 0; i < h_B.ind.size(); i++)
+    {
+        std::cout << h_B.ind[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    std::cout << "staring B val" << std::endl;
+    for(size_t i = 0; i < std::min(h_B.val.size(), (size_t)10); i++)
+    {
+        std::cout << h_B.val[i] << " ";
+    }
+    std::cout << "" << std::endl;
+
+    // h_A.define(M, K, M * K, baseA);
+    // h_B.define(K, N, K * N, baseB);
+    // h_C.define(M, N, 0, baseC);
+
+    // h_A.ptr[0] = 0;
+    // for(int i = 0; i < M; i++)
     // {
-    //     rocsparse_matrix_factory<T> matrix_factory(arg, arg.timing ? false : true, full_rank);
-    //     matrix_factory.init_csr(h_A, M, K, baseA);
-    //     switch(scenario)
-    //     {
-    //     case testing_csrgemm_scenario_none:
-    //     {
-    //         break;
-    //     }
-    //     case testing_csrgemm_scenario_alpha:
-    //     {
-    //         rocsparse_matrix_factory_random<T> rf(full_rank);
-    //         {
-    //             h_B.base = baseB;
-    //             h_B.m    = K;
-    //             h_B.n    = N;
-    //             rf.init_csr(h_B.ptr,
-    //                         h_B.ind,
-    //                         h_B.val,
-    //                         h_B.m,
-    //                         h_B.n,
-    //                         h_B.nnz,
-    //                         h_B.base,
-    //                         rocsparse_matrix_type_general,
-    //                         rocsparse_fill_mode_lower,
-    //                         rocsparse_storage_mode_sorted);
-    //         }
-
-    //         break;
-    //     }
-    //     case testing_csrgemm_scenario_beta:
-    //     {
-    //         matrix_factory.init_csr(h_D, M, N, baseD);
-    //         break;
-    //     }
-    //     case testing_csrgemm_scenario_alpha_and_beta:
-    //     {
-    //         rocsparse_matrix_factory_random<T> rf(full_rank);
-    //         {
-    //             h_B.base = baseB;
-    //             h_B.m    = K;
-    //             h_B.n    = N;
-    //             rf.init_csr(h_B.ptr,
-    //                         h_B.ind,
-    //                         h_B.val,
-    //                         h_B.m,
-    //                         h_B.n,
-    //                         h_B.nnz,
-    //                         h_B.base,
-    //                         rocsparse_matrix_type_general,
-    //                         rocsparse_fill_mode_lower,
-    //                         rocsparse_storage_mode_sorted);
-    //         }
-
-    //         {
-    //             h_D.base = baseD;
-    //             h_D.m    = M;
-    //             h_D.n    = N;
-    //             rf.init_csr(h_D.ptr,
-    //                         h_D.ind,
-    //                         h_D.val,
-    //                         h_D.m,
-    //                         h_D.n,
-    //                         h_D.nnz,
-    //                         h_D.base,
-    //                         rocsparse_matrix_type_general,
-    //                         rocsparse_fill_mode_lower,
-    //                         rocsparse_storage_mode_sorted);
-    //         }
-
-    //         break;
-    //     }
-    //     }
-
-    //     h_C.define(M, N, 0, baseC);
+    //     h_A.ptr[i + 1] = h_A.ptr[i] + K;
     // }
 
-    h_A.define(M, K, M * K, baseA);
-    h_B.define(K, N, K * N, baseB);
-    h_C.define(M, N, 0, baseC);
+    // for(int i = 0; i < M; i++)
+    // {
+    //     int start = h_A.ptr[i] - baseA;
+    //     int end   = h_A.ptr[i + 1] - baseA;
 
-    h_A.ptr[0] = 0;
-    for(int i = 0; i < M; i++)
-    {
-        h_A.ptr[i + 1] = h_A.ptr[i] + K;
-    }
+    //     for(int j = start; j < end; j++)
+    //     {
+    //         h_A.ind[j] = j - start + baseA;
+    //     }
+    // }
 
-    for(int i = 0; i < M; i++)
-    {
-        int start = h_A.ptr[i] - baseA;
-        int end   = h_A.ptr[i + 1] - baseA;
+    // h_B.ptr[0] = 0;
+    // for(int i = 0; i < K; i++)
+    // {
+    //     h_B.ptr[i + 1] = h_B.ptr[i] + N;
+    // }
 
-        for(int j = start; j < end; j++)
-        {
-            h_A.ind[j] = j - start + baseA;
-        }
-    }
+    // for(int i = 0; i < K; i++)
+    // {
+    //     int start = h_B.ptr[i] - baseB;
+    //     int end   = h_B.ptr[i + 1] - baseB;
 
-    h_B.ptr[0] = 0;
-    for(int i = 0; i < K; i++)
-    {
-        h_B.ptr[i + 1] = h_B.ptr[i] + N;
-    }
+    //     for(int j = start; j < end; j++)
+    //     {
+    //         h_B.ind[j] = j - start + baseB;
+    //     }
+    // }
 
-    for(int i = 0; i < K; i++)
-    {
-        int start = h_B.ptr[i] - baseB;
-        int end   = h_B.ptr[i + 1] - baseB;
+    // std::cout << "h_A" << std::endl;
+    // for(int i = 0; i < M; i++)
+    // {
+    //     int start = h_A.ptr[i] - baseA;
+    //     int end   = h_A.ptr[i + 1] - baseA;
 
-        for(int j = start; j < end; j++)
-        {
-            h_B.ind[j] = j - start + baseB;
-        }
-    }
+    //     std::vector<T> htemp(K, 0);
+    //     for(int j = start; j < end; j++)
+    //     {
+    //         htemp[h_A.ind[j] - baseA] = 1;
+    //     }
 
-    std::cout << "h_A" << std::endl;
-    for(int i = 0; i < M; i++)
-    {
-        int start = h_A.ptr[i] - baseA;
-        int end   = h_A.ptr[i + 1] - baseA;
+    //     for(int j = 0; j < K; j++)
+    //     {
+    //         std::cout << htemp[j] << " ";
+    //     }
+    //     std::cout << "" << std::endl;
+    // }
+    // std::cout << "" << std::endl;
 
-        std::vector<T> htemp(K, 0);
-        for(int j = start; j < end; j++)
-        {
-            htemp[h_A.ind[j] - baseA] = 1;
-        }
+    // std::cout << "h_B" << std::endl;
+    // for(int i = 0; i < K; i++)
+    // {
+    //     int start = h_B.ptr[i] - baseB;
+    //     int end   = h_B.ptr[i + 1] - baseB;
 
-        for(int j = 0; j < K; j++)
-        {
-            std::cout << htemp[j] << " ";
-        }
-        std::cout << "" << std::endl;
-    }
-    std::cout << "" << std::endl;
+    //     std::vector<T> htemp(N, 0);
+    //     for(int j = start; j < end; j++)
+    //     {
+    //         htemp[h_B.ind[j] - baseB] = 1;
+    //     }
 
-    std::cout << "h_B" << std::endl;
-    for(int i = 0; i < K; i++)
-    {
-        int start = h_B.ptr[i] - baseB;
-        int end   = h_B.ptr[i + 1] - baseB;
-
-        std::vector<T> htemp(N, 0);
-        for(int j = start; j < end; j++)
-        {
-            htemp[h_B.ind[j] - baseB] = 1;
-        }
-
-        for(int j = 0; j < N; j++)
-        {
-            std::cout << htemp[j] << " ";
-        }
-        std::cout << "" << std::endl;
-    }
-    std::cout << "" << std::endl;
+    //     for(int j = 0; j < N; j++)
+    //     {
+    //         std::cout << htemp[j] << " ";
+    //     }
+    //     std::cout << "" << std::endl;
+    // }
+    // std::cout << "" << std::endl;
 
     //
     // Declare device objects.
