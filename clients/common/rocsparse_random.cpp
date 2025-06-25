@@ -101,12 +101,6 @@ void generate_random_cache()
             rocsparse_seedrand();
     }
 
-    for(int i = 0; i < 10; i++)
-    {
-        std::cout << s_rand_uniform_array[i] << " ";
-    }
-    std::cout << "" << std::endl;
-
     if(!s_rand_normal_init)
     {
         for(int i = 0; i < RANDOM_CACHE_SIZE; i++)

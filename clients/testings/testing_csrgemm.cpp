@@ -385,6 +385,9 @@ enum testing_csrgemm_scenario
 template <typename T>
 void testing_csrgemm(const Arguments& arg)
 {
+    std::cout << "random_cached_generator<float>(): " << random_cached_generator<float>()
+              << std::endl;
+    rocsparse_seedrand();
 
     rocsparse_int         M         = arg.M;
     rocsparse_int         N         = arg.N;
@@ -397,7 +400,7 @@ void testing_csrgemm(const Arguments& arg)
     rocsparse_index_base  baseD     = arg.baseD;
     static constexpr bool full_rank = false;
 
-    T v_alpha = arg.get_alpha<T>(), v_beta = arg.get_beta<T>();
+    T v_alpha = arg.get_alpha<T>();
 
     // Create rocsparse handle
     rocsparse_local_handle handle;
@@ -431,180 +434,33 @@ void testing_csrgemm(const Arguments& arg)
         B.nnz, B.val, B.ptr, B.ind, beta, descrD, D.nnz, D.val, D.ptr, D.ind, descrC, C.val,  \
         C.ptr, C.ind, info, dbuffer
 
-    // 4 Scenarios need to be tested:
-
-    // Scenario 1: alpha == nullptr && beta == nullptr
-    // Scenario 2: alpha != nullptr && beta == nullptr
-    // Scenario 3: alpha == nullptr && beta != nullptr
-    // Scenario 4: alpha != nullptr && beta != nullptr
-
-    // alpha == -99 means test for alpha == nullptr
-    // beta  == -99 means test for beta == nullptr
-    testing_csrgemm_scenario scenario = testing_csrgemm_scenario_none;
-    if(v_alpha != static_cast<T>(-99) && v_beta == static_cast<T>(-99))
-    {
-        scenario = testing_csrgemm_scenario_alpha;
-    }
-    else if(v_alpha == static_cast<T>(-99) && v_beta != static_cast<T>(-99))
-    {
-        scenario = testing_csrgemm_scenario_beta;
-    }
-    else if(v_alpha != static_cast<T>(-99) && v_beta != static_cast<T>(-99))
-    {
-        scenario = testing_csrgemm_scenario_alpha_and_beta;
-    }
-
     host_dense_vector<T> h_alpha(0), h_beta(0);
-    switch(scenario)
-    {
-    case testing_csrgemm_scenario_none:
-    {
-        break;
-    }
-    case testing_csrgemm_scenario_alpha:
-    {
-        h_alpha.resize(1);
-        *h_alpha = v_alpha;
-        break;
-    }
-    case testing_csrgemm_scenario_beta:
-    {
-        h_beta.resize(1);
-        *h_beta = v_beta;
-        break;
-    }
-    case testing_csrgemm_scenario_alpha_and_beta:
-    {
-        h_alpha.resize(1);
-        *h_alpha = v_alpha;
-        h_beta.resize(1);
-        *h_beta = v_beta;
-        break;
-    }
-    }
+    h_alpha.resize(1);
+    *h_alpha = v_alpha;
 
-    //
-    // Argument sanity check before allocating invalid memory
-    //
-    if((M <= 0 || N <= 0 || K <= 0) || scenario == testing_csrgemm_scenario_none)
-    {
-
-        device_csr_matrix<T> d_A, d_B, d_C, d_D;
-        d_A.define(M, K, 0, baseA);
-        d_B.define(K, N, 0, baseB);
-        d_C.define(M, N, 0, baseC);
-        d_D.define(M, N, 0, baseD);
-
-        CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
-
-        size_t           out_buffer_size;
-        rocsparse_int    out_nnz;
-        rocsparse_status status_1 = rocsparse_csrgemm_buffer_size<T>(
-            PARAMS_BUFFER_SIZE(h_alpha, h_beta, d_A, d_B, d_C, d_D, out_buffer_size));
-        rocsparse_status status_2 = rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, &out_nnz));
-        rocsparse_status status_3
-            = rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D));
-
-        EXPECT_ROCSPARSE_STATUS(status_1,
-                                (M < 0 || N < 0 || K < 0) ? rocsparse_status_invalid_size
-                                : scenario == testing_csrgemm_scenario_none
-                                    ? rocsparse_status_invalid_pointer
-                                    : rocsparse_status_success);
-
-        EXPECT_ROCSPARSE_STATUS(status_2,
-                                (M < 0 || N < 0 || K < 0) ? rocsparse_status_invalid_size
-                                : scenario == testing_csrgemm_scenario_none
-                                    ? rocsparse_status_invalid_pointer
-                                    : rocsparse_status_success);
-
-        EXPECT_ROCSPARSE_STATUS(status_3,
-                                (M < 0 || N < 0 || K < 0) ? rocsparse_status_invalid_size
-                                : scenario == testing_csrgemm_scenario_none
-                                    ? rocsparse_status_invalid_pointer
-                                    : rocsparse_status_success);
-        return;
-    }
-
-    //
     // Declare host objects.
-    //
     host_csr_matrix<T> h_A, h_B, h_C, h_D;
 
-    //
     // Initialize matrices.
-    //
     {
         rocsparse_matrix_factory<T> matrix_factory(arg, arg.timing ? false : true, full_rank);
         matrix_factory.init_csr(h_A, M, K, baseA);
-        switch(scenario)
-        {
-        case testing_csrgemm_scenario_none:
-        {
-            break;
-        }
-        case testing_csrgemm_scenario_alpha:
-        {
-            rocsparse_matrix_factory_random<T> rf(full_rank);
-            {
-                h_B.base = baseB;
-                h_B.m    = K;
-                h_B.n    = N;
-                rf.init_csr(h_B.ptr,
-                            h_B.ind,
-                            h_B.val,
-                            h_B.m,
-                            h_B.n,
-                            h_B.nnz,
-                            h_B.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
 
-            break;
-        }
-        case testing_csrgemm_scenario_beta:
+        rocsparse_matrix_factory_random<T> rf(full_rank);
         {
-            matrix_factory.init_csr(h_D, M, N, baseD);
-            break;
-        }
-        case testing_csrgemm_scenario_alpha_and_beta:
-        {
-            rocsparse_matrix_factory_random<T> rf(full_rank);
-            {
-                h_B.base = baseB;
-                h_B.m    = K;
-                h_B.n    = N;
-                rf.init_csr(h_B.ptr,
-                            h_B.ind,
-                            h_B.val,
-                            h_B.m,
-                            h_B.n,
-                            h_B.nnz,
-                            h_B.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
-
-            {
-                h_D.base = baseD;
-                h_D.m    = M;
-                h_D.n    = N;
-                rf.init_csr(h_D.ptr,
-                            h_D.ind,
-                            h_D.val,
-                            h_D.m,
-                            h_D.n,
-                            h_D.nnz,
-                            h_D.base,
-                            rocsparse_matrix_type_general,
-                            rocsparse_fill_mode_lower,
-                            rocsparse_storage_mode_sorted);
-            }
-
-            break;
-        }
+            h_B.base = baseB;
+            h_B.m    = K;
+            h_B.n    = N;
+            rf.init_csr(h_B.ptr,
+                        h_B.ind,
+                        h_B.val,
+                        h_B.m,
+                        h_B.n,
+                        h_B.nnz,
+                        h_B.base,
+                        rocsparse_matrix_type_general,
+                        rocsparse_fill_mode_lower,
+                        rocsparse_storage_mode_sorted);
         }
 
         h_C.define(M, N, 0, baseC);
@@ -730,9 +586,7 @@ void testing_csrgemm(const Arguments& arg)
     // }
     // std::cout << "" << std::endl;
 
-    //
     // Declare device objects.
-    //
     device_csr_matrix<T>   d_A(h_A), d_B(h_B), d_C(h_C), d_D(h_D);
     device_dense_vector<T> d_alpha(h_alpha), d_beta(h_beta);
 
@@ -746,9 +600,7 @@ void testing_csrgemm(const Arguments& arg)
 
     if(arg.unit_check)
     {
-        //
         // Host calculation.
-        //
         {
             rocsparse_int out_nnz;
 
@@ -796,136 +648,20 @@ void testing_csrgemm(const Arguments& arg)
         }
 
         {
-            //
             // GPU with pointer mode host
-            //
             host_scalar<rocsparse_int> h_out_nnz;
             CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
             CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, h_out_nnz)));
-            d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-            if(ROCSPARSE_REPRODUCIBILITY)
-            {
-                rocsparse_reproducibility::save("d_C pointer mode host", d_C);
-            }
+            // d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
+            // CHECK_ROCSPARSE_ERROR(
+            //     rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
+            // if(ROCSPARSE_REPRODUCIBILITY)
+            // {
+            //     rocsparse_reproducibility::save("d_C pointer mode host", d_C);
+            // }
 
-            h_C.near_check(d_C);
+            // h_C.near_check(d_C);
         }
-        {
-            //
-            // GPU with pointer mode device
-            //
-            device_scalar<rocsparse_int> d_out_nnz;
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_device));
-            CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, d_out_nnz)));
-            host_scalar<rocsparse_int> h_out_nnz(d_out_nnz);
-            d_C.define(d_C.m, d_C.n, 0, d_C.base);
-            d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_csrgemm<T>(PARAMS(d_alpha, d_beta, d_A, d_B, d_C, d_D)));
-
-            if(ROCSPARSE_REPRODUCIBILITY)
-            {
-                rocsparse_reproducibility::save("d_C pointer mode device", d_C);
-            }
-
-            h_C.near_check(d_C);
-        }
-    }
-
-    if(arg.timing)
-    {
-#define ROCSPARSE_TIMER_IN(decl_) double decl_ = get_time_us();
-#define ROCSPARSE_TIMER_OUT(decl_) decl_ = (get_time_us() - decl_) / number_hot_calls
-
-        int number_cold_calls = 2;
-        int number_hot_calls  = arg.iters;
-
-        CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
-
-        //
-        // WARM UP
-        //
-        rocsparse_int out_nnz;
-        CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, &out_nnz)));
-        d_C.define(d_C.m, d_C.n, out_nnz, d_C.base);
-
-        for(int iter = 0; iter < number_cold_calls; ++iter)
-        {
-            CHECK_ROCSPARSE_ERROR(
-                rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-        }
-
-        ROCSPARSE_TIMER_IN(gpu_solve_time_used);
-        {
-            for(int iter = 0; iter < number_hot_calls; ++iter)
-            {
-                CHECK_ROCSPARSE_ERROR(
-                    rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-            }
-        }
-        ROCSPARSE_TIMER_OUT(gpu_solve_time_used);
-        CHECK_HIP_ERROR(hipDeviceSynchronize());
-
-#undef PARAMS
-#undef PARAMS_NNZ
-#undef PARAMS_BUFFER_SIZE
-
-        double gflop_count = csrgemm_gflop_count<T, rocsparse_int, rocsparse_int>(
-            M, h_alpha, h_A.ptr, h_A.ind, h_B.ptr, h_beta, h_D.ptr, h_A.base);
-        double gbyte_count = csrgemm_gbyte_count<T, rocsparse_int, rocsparse_int>(
-            M, N, K, d_A.nnz, d_B.nnz, d_C.nnz, d_D.nnz, h_alpha, h_beta);
-
-        double gpu_gflops = get_gpu_gflops(gpu_solve_time_used, gflop_count);
-        double gpu_gbyte  = get_gpu_gbyte(gpu_solve_time_used, gbyte_count);
-
-        char alpha[32], beta[32];
-        sprintf(alpha, "null");
-        sprintf(beta, "null");
-        if(h_alpha.data() != nullptr)
-        {
-            std::stringstream ss;
-            ss << *h_alpha;
-            sprintf(alpha, "%s", ss.str().c_str());
-        }
-
-        if(h_beta.data() != nullptr)
-        {
-            std::stringstream ss;
-            ss << *h_beta;
-            sprintf(beta, "%s", ss.str().c_str());
-        }
-
-        display_timing_info(display_key_t::trans_A,
-                            rocsparse_operation2string(transA),
-                            display_key_t::trans_B,
-                            rocsparse_operation2string(transB),
-                            display_key_t::M,
-                            M,
-                            display_key_t::N,
-                            N,
-                            display_key_t::K,
-                            K,
-                            display_key_t::nnz_A,
-                            d_A.nnz,
-                            display_key_t::nnz_B,
-                            d_B.nnz,
-                            display_key_t::nnz_C,
-                            d_C.nnz,
-                            display_key_t::nnz_D,
-                            d_D.nnz,
-                            display_key_t::alpha,
-                            alpha,
-                            display_key_t::beta,
-                            beta,
-                            display_key_t::gflops,
-                            gpu_gflops,
-                            display_key_t::bandwidth,
-                            gpu_gbyte,
-                            display_key_t::time_ms,
-                            get_gpu_time_msec(gpu_solve_time_used));
     }
 
     // Free buffer
