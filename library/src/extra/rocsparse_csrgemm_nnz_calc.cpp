@@ -81,52 +81,7 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
                                       ? ((descr_D) ? descr_D->base : rocsparse_index_base_zero)
                                       : rocsparse_index_base_zero;
 
-    //    bool mul = info_C->csrgemm_info->mul;
-    //    bool add = info_C->csrgemm_info->add;
-    //
-    //    // Temporary buffer
-    //    char* buffer = reinterpret_cast<char*>(temp_buffer);
-    //
-    //    // rocprim buffer
-    //    size_t rocprim_size;
-    //    void*  rocprim_buffer;
-    //
-    //     // Compute number of intermediate products for each row
-    // #define CSRGEMM_DIM 256
-    // #define CSRGEMM_SUB 8
-    //     RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //         (rocsparse::csrgemm_intermediate_products<CSRGEMM_DIM, CSRGEMM_SUB>),
-    //         dim3((m - 1) / (CSRGEMM_DIM / CSRGEMM_SUB) + 1),
-    //         dim3(CSRGEMM_DIM),
-    //         0,
-    //         stream,
-    //         m,
-    //         csr_row_ptr_A,
-    //         csr_col_ind_A,
-    //         csr_row_ptr_B,
-    //         csr_row_ptr_D,
-    //         csr_row_ptr_C,
-    //         base_A,
-    //         mul,
-    //         add);
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-
-    //     std::vector<I> hcsr_row_ptr_C(m + 1, 0);
-    //     RETURN_IF_HIP_ERROR(hipMemcpy(
-    //         hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
-    //     std::cout << "After intermediate products hcsr_row_ptr_C" << std::endl;
-    //     for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
-    //     {
-    //         std::cout << hcsr_row_ptr_C[i] << " ";
-    //     }
-    //     std::cout << "" << std::endl;
-
-    //std::vector<J> h_group_offset(CSRGEMM_MAXGROUPS, 0);
-    //std::vector<J> h_perm(m, 0);
     std::vector<I> hcsr_row_ptr_C(m + 1, 0);
-    RETURN_IF_HIP_ERROR(hipMemcpy(
-        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
     std::vector<J> h_group_size   = {38, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0};
     std::vector<J> h_group_offset = {0, 38, 49, 50, 50, 50, 50, 50, 50, 50, 50};
     std::vector<J> h_perm = {0,  1,  2,  3,  7,  8,  10, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23,
@@ -142,267 +97,65 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
         hipMemcpy(d_group_offset, h_group_offset.data(), sizeof(J) * 11, hipMemcpyHostToDevice));
     RETURN_IF_HIP_ERROR(hipMemcpy(d_perm, h_perm.data(), sizeof(J) * m, hipMemcpyHostToDevice));
 
-    //     // Determine maximum of all intermediate products
-    //     RETURN_IF_ROCSPARSE_ERROR(
-    //         (rocsparse::primitives::find_max_buffer_size<I, I>(handle, m, &rocprim_size)));
-    //     rocprim_buffer = reinterpret_cast<void*>(buffer);
-    //     RETURN_IF_ROCSPARSE_ERROR(rocsparse::primitives::find_max(
-    //         handle, csr_row_ptr_C, csr_row_ptr_C + m, m, rocprim_size, rocprim_buffer));
+    // std::cout << "h_group_size" << std::endl;
+    // for(size_t i = 0; i < CSRGEMM_MAXGROUPS; i++)
+    // {
+    //     std::cout << h_group_size[i] << " ";
+    // }
+    // std::cout << "" << std::endl;
 
-    //     I int_max;
-    //     RETURN_IF_HIP_ERROR(
-    //         hipMemcpyAsync(&int_max, csr_row_ptr_C + m, sizeof(I), hipMemcpyDeviceToHost, stream));
-    //     // Wait for host transfer to finish
-    //     RETURN_IF_HIP_ERROR(hipStreamSynchronize(stream));
+    // RETURN_IF_HIP_ERROR(hipMemcpy(h_group_offset.data(),
+    //                               d_group_offset,
+    //                               sizeof(J) * CSRGEMM_MAXGROUPS,
+    //                               hipMemcpyDeviceToHost));
+    // std::cout << "h_group_offset" << std::endl;
+    // for(size_t i = 0; i < h_group_offset.size(); i++)
+    // {
+    //     std::cout << h_group_offset[i] << " ";
+    // }
+    // std::cout << "" << std::endl;
 
-    //     // Group offset buffer
-    //     J* d_group_offset = reinterpret_cast<J*>(buffer);
-    //     buffer += sizeof(J) * 256;
-
-    //     // Group size buffer
-    //     J h_group_size[CSRGEMM_MAXGROUPS];
-
-    //     // Initialize group sizes with zero
-    //     memset(&h_group_size[0], 0, sizeof(J) * CSRGEMM_MAXGROUPS);
-
-    //     // Permutation array
-    //     J* d_perm = nullptr;
-
-    //     std::cout << "int_max: " << int_max << std::endl;
-
-    //     // If maximum of intermediate products exceeds 32, we process the rows in groups of
-    //     // similar sized intermediate products
-    //     if(int_max > 32)
-    //     {
-    //         // Group size buffer
-    //         J* d_group_size = reinterpret_cast<J*>(buffer);
-    //         buffer += sizeof(J) * 256 * CSRGEMM_MAXGROUPS;
-
-    //         std::cout << "handle->shared_mem_per_block_optin: " << handle->shared_mem_per_block_optin
-    //                   << std::endl;
-
-    // #define CSRGEMM_DIM 256
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_group_reduce_part1<CSRGEMM_DIM, CSRGEMM_MAXGROUPS>),
-    //             dim3(CSRGEMM_DIM),
-    //             dim3(CSRGEMM_DIM),
-    //             0,
-    //             stream,
-    //             m,
-    //             csr_row_ptr_C,
-    //             d_group_size,
-    //             handle->shared_mem_per_block_optin);
-
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_group_reduce_part3<CSRGEMM_DIM, CSRGEMM_MAXGROUPS>),
-    //             dim3(1),
-    //             dim3(CSRGEMM_DIM),
-    //             0,
-    //             stream,
-    //             d_group_size);
-    // #undef CSRGEMM_DIM
-
-    //         // Exclusive sum to obtain group offsets
-    //         rocprim_buffer = reinterpret_cast<void*>(buffer);
-    //         RETURN_IF_ROCSPARSE_ERROR((rocsparse::primitives::exclusive_scan_buffer_size<J, J>(
-    //             handle, static_cast<J>(0), CSRGEMM_MAXGROUPS, &rocprim_size)));
-    //         RETURN_IF_ROCSPARSE_ERROR(rocsparse::primitives::exclusive_scan(handle,
-    //                                                                         d_group_size,
-    //                                                                         d_group_offset,
-    //                                                                         static_cast<J>(0),
-    //                                                                         CSRGEMM_MAXGROUPS,
-    //                                                                         rocprim_size,
-    //                                                                         rocprim_buffer));
-
-    //         // Copy group sizes to host
-    //         RETURN_IF_HIP_ERROR(hipMemcpyAsync(&h_group_size,
-    //                                            d_group_size,
-    //                                            sizeof(J) * CSRGEMM_MAXGROUPS,
-    //                                            hipMemcpyDeviceToHost,
-    //                                            stream));
-
-    //         // Wait for host transfer to finish
-    //         RETURN_IF_HIP_ERROR(hipStreamSynchronize(stream));
-
-    //         // Permutation temporary arrays
-    //         J* tmp_vals = reinterpret_cast<J*>(buffer);
-    //         buffer += ((sizeof(J) * m - 1) / 256 + 1) * 256;
-
-    //         J* tmp_perm = reinterpret_cast<J*>(buffer);
-    //         buffer += ((sizeof(J) * m - 1) / 256 + 1) * 256;
-
-    //         I* tmp_keys = reinterpret_cast<I*>(buffer);
-    //         buffer += ((sizeof(I) * m - 1) / 256 + 1) * 256;
-
-    //         // Create identity permutation for group access
-    //         RETURN_IF_ROCSPARSE_ERROR(
-    //             rocsparse::create_identity_permutation_template(handle, m, tmp_perm));
-
-    //         rocsparse::primitives::double_buffer<I> d_keys(csr_row_ptr_C, tmp_keys);
-    //         rocsparse::primitives::double_buffer<J> d_vals(tmp_perm, tmp_vals);
-
-    //         uint32_t startbit = 0;
-    //         uint32_t endbit   = rocsparse::clz(CSRGEMM_MAXGROUPS);
-
-    //         // Sort pairs (by groups)
-    //         rocprim_buffer = reinterpret_cast<void*>(buffer);
-    //         RETURN_IF_ROCSPARSE_ERROR((rocsparse::primitives::radix_sort_pairs_buffer_size<I, J>(
-    //             handle, m, startbit, endbit, &rocprim_size)));
-    //         RETURN_IF_ROCSPARSE_ERROR(rocsparse::primitives::radix_sort_pairs(
-    //             handle, d_keys, d_vals, m, startbit, endbit, rocprim_size, rocprim_buffer));
-
-    //         d_perm = d_vals.current();
-
-    //         // Release tmp_keys buffer
-    //         buffer -= ((sizeof(I) * m - 1) / 256 + 1) * 256;
-    //     }
-    //     else
-    //     {
-    //         // First group processes all rows
-    //         h_group_size[0] = m;
-    //         RETURN_IF_HIP_ERROR(hipMemsetAsync(d_group_offset, 0, sizeof(J), stream));
-    //     }
-
-    std::cout << "h_group_size" << std::endl;
-    for(size_t i = 0; i < CSRGEMM_MAXGROUPS; i++)
-    {
-        std::cout << h_group_size[i] << " ";
-    }
-    std::cout << "" << std::endl;
-
-    RETURN_IF_HIP_ERROR(hipMemcpy(h_group_offset.data(),
-                                  d_group_offset,
-                                  sizeof(J) * CSRGEMM_MAXGROUPS,
-                                  hipMemcpyDeviceToHost));
-    std::cout << "h_group_offset" << std::endl;
-    for(size_t i = 0; i < h_group_offset.size(); i++)
-    {
-        std::cout << h_group_offset[i] << " ";
-    }
-    std::cout << "" << std::endl;
-
-    RETURN_IF_HIP_ERROR(hipMemcpy(h_perm.data(), d_perm, sizeof(J) * m, hipMemcpyDeviceToHost));
-    std::cout << "h_perm" << std::endl;
-    for(size_t i = 0; i < h_perm.size(); i++)
-    {
-        std::cout << h_perm[i] << " ";
-    }
-    std::cout << "" << std::endl;
-
-    // Compute non-zero entries per row for each group
-
-    //     // Group 0: 0 - 32 intermediate products
-    //     if(h_group_size[0] > 0)
-    //     {
-    // #define CSRGEMM_DIM 128
-    // #define CSRGEMM_SUB 4
-    // #define CSRGEMM_HASHSIZE 32
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_wf_per_row<CSRGEMM_DIM,
-    //                                                CSRGEMM_SUB,
-    //                                                CSRGEMM_HASHSIZE,
-    //                                                CSRGEMM_NNZ_HASH>),
-    //             dim3((h_group_size[0] - 1) / (CSRGEMM_DIM / CSRGEMM_SUB) + 1),
-    //             dim3(CSRGEMM_DIM),
-    //             0,
-    //             stream,
-    //             h_group_size[0],
-    //             &d_group_offset[0],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             mul,
-    //             add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 1: 33 - 64 intermediate products
-    //     if(h_group_size[1] > 0)
-    //     {
-    // #define CSRGEMM_DIM 256
-    // #define CSRGEMM_SUB 8
-    // #define CSRGEMM_HASHSIZE 64
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_wf_per_row<CSRGEMM_DIM,
-    //                                                CSRGEMM_SUB,
-    //                                                CSRGEMM_HASHSIZE,
-    //                                                CSRGEMM_NNZ_HASH>),
-    //             dim3((h_group_size[1] - 1) / (CSRGEMM_DIM / CSRGEMM_SUB) + 1),
-    //             dim3(CSRGEMM_DIM),
-    //             0,
-    //             stream,
-    //             h_group_size[1],
-    //             &d_group_offset[1],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             mul,
-    //             add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //    RETURN_IF_HIP_ERROR(hipMemcpy(
-    //        hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
-    //    std::cout << "After group 1 hcsr_row_ptr_C" << std::endl;
-    //    for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
-    //    {
-    //        std::cout << hcsr_row_ptr_C[i] << " ";
-    //    }
-    //    std::cout << "" << std::endl;
+    // RETURN_IF_HIP_ERROR(hipMemcpy(h_perm.data(), d_perm, sizeof(J) * m, hipMemcpyDeviceToHost));
+    // std::cout << "h_perm" << std::endl;
+    // for(size_t i = 0; i < h_perm.size(); i++)
+    // {
+    //     std::cout << h_perm[i] << " ";
+    // }
+    // std::cout << "" << std::endl;
 
     // Group 2: 65 - 512 intermediate products
-    if(h_group_size[2] > 0)
-    {
+    //if(h_group_size[2] > 0)
+    //{
 #define CSRGEMM_DIM 128
 #define CSRGEMM_SUB 8
 #define CSRGEMM_HASHSIZE 512
-        RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-            (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-                                                  CSRGEMM_SUB,
-                                                  CSRGEMM_HASHSIZE,
-                                                  CSRGEMM_NNZ_HASH>),
-            dim3(h_group_size[2]),
-            dim3(CSRGEMM_DIM),
-            (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-            stream,
-            &d_group_offset[2],
-            d_perm,
-            csr_row_ptr_A,
-            csr_col_ind_A,
-            csr_row_ptr_B,
-            csr_col_ind_B,
-            csr_row_ptr_D,
-            csr_col_ind_D,
-            csr_row_ptr_C,
-            base_A,
-            base_B,
-            base_D,
-            info_C->csrgemm_info->mul,
-            info_C->csrgemm_info->add);
+    RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
+        (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
+                                              CSRGEMM_SUB,
+                                              CSRGEMM_HASHSIZE,
+                                              CSRGEMM_NNZ_HASH>),
+        dim3(h_group_size[2]),
+        dim3(CSRGEMM_DIM),
+        (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
+        stream,
+        &d_group_offset[2],
+        d_perm,
+        csr_row_ptr_A,
+        csr_col_ind_A,
+        csr_row_ptr_B,
+        csr_col_ind_B,
+        csr_row_ptr_D,
+        csr_col_ind_D,
+        csr_row_ptr_C,
+        base_A,
+        base_B,
+        base_D,
+        info_C->csrgemm_info->mul,
+        info_C->csrgemm_info->add);
 #undef CSRGEMM_HASHSIZE
 #undef CSRGEMM_SUB
 #undef CSRGEMM_DIM
-    }
+    //}
 
     RETURN_IF_HIP_ERROR(hipMemcpy(
         hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
@@ -413,378 +166,8 @@ rocsparse_status rocsparse::csrgemm_nnz_calc(rocsparse_handle          handle,
     }
     std::cout << "" << std::endl;
 
-    //     // Group 3: 513 - 1024 intermediate products
-    //     if(h_group_size[3] > 0)
-    //     {
-    // #define CSRGEMM_DIM 128
-    // #define CSRGEMM_SUB 8
-    // #define CSRGEMM_HASHSIZE 1024
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[3]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             stream,
-    //             &d_group_offset[3],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 4: 1025 - 2048 intermediate products
-    //     if(h_group_size[4] > 0)
-    //     {
-    // #define CSRGEMM_DIM 256
-    // #define CSRGEMM_SUB 16
-    // #define CSRGEMM_HASHSIZE 2048
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[4]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             stream,
-    //             &d_group_offset[4],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 5: 2049 - 4096 intermediate products
-    //     if(h_group_size[5] > 0)
-    //     {
-    // #define CSRGEMM_DIM 512
-    // #define CSRGEMM_SUB 16
-    // #define CSRGEMM_HASHSIZE 4096
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[5]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             stream,
-    //             &d_group_offset[5],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 6: 4097 - 8192 intermediate products
-    //     if(h_group_size[6] > 0)
-    //     {
-    // #define CSRGEMM_DIM 1024
-    // #define CSRGEMM_SUB 32
-    // #define CSRGEMM_HASHSIZE 8192
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[6]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             stream,
-    //             &d_group_offset[6],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 7: 8193 - 16384 intermediate products
-    //     if(h_group_size[7] > 0)
-    //     {
-    // #define CSRGEMM_DIM 1024
-    // #define CSRGEMM_SUB 32
-    // #define CSRGEMM_HASHSIZE 16384
-    //         RETURN_IF_HIP_ERROR(hipFuncSetAttribute(
-    //             (const void*)rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                               CSRGEMM_SUB,
-    //                                                               CSRGEMM_HASHSIZE,
-    //                                                               CSRGEMM_NNZ_HASH,
-    //                                                               I,
-    //                                                               J>,
-    //             hipFuncAttributeMaxDynamicSharedMemorySize,
-    //             csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()));
-
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[7]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             handle->stream,
-    //             &d_group_offset[7],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     RETURN_IF_HIP_ERROR(hipMemcpy(
-    //         hcsr_row_ptr_C.data(), csr_row_ptr_C, sizeof(I) * (m + 1), hipMemcpyDeviceToHost));
-    //     std::cout << "After group 7 hcsr_row_ptr_C" << std::endl;
-    //     for(size_t i = 0; i < hcsr_row_ptr_C.size(); i++)
-    //     {
-    //         std::cout << hcsr_row_ptr_C[i] << " ";
-    //     }
-    //     std::cout << "" << std::endl;
-
-    //     // Group 8: 16385 - 32768 intermediate products
-    //     if(h_group_size[8] > 0)
-    //     {
-    // #define CSRGEMM_DIM 1024
-    // #define CSRGEMM_SUB 32
-    // #define CSRGEMM_HASHSIZE 32768
-    //         RETURN_IF_HIP_ERROR(hipFuncSetAttribute(
-    //             (const void*)rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                               CSRGEMM_SUB,
-    //                                                               CSRGEMM_HASHSIZE,
-    //                                                               CSRGEMM_NNZ_HASH,
-    //                                                               I,
-    //                                                               J>,
-    //             hipFuncAttributeMaxDynamicSharedMemorySize,
-    //             csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()));
-
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[8]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             handle->stream,
-    //             &d_group_offset[8],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 9: 32769 - 65536 intermediate products
-    //     if(h_group_size[9] > 0)
-    //     {
-    // #define CSRGEMM_DIM 1024
-    // #define CSRGEMM_SUB 32
-    // #define CSRGEMM_HASHSIZE 65536
-    //         RETURN_IF_HIP_ERROR(hipFuncSetAttribute(
-    //             (const void*)rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                               CSRGEMM_SUB,
-    //                                                               CSRGEMM_HASHSIZE,
-    //                                                               CSRGEMM_NNZ_HASH,
-    //                                                               I,
-    //                                                               J>,
-    //             hipFuncAttributeMaxDynamicSharedMemorySize,
-    //             csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()));
-
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_nnz_block_per_row<CSRGEMM_DIM,
-    //                                                   CSRGEMM_SUB,
-    //                                                   CSRGEMM_HASHSIZE,
-    //                                                   CSRGEMM_NNZ_HASH>),
-    //             dim3(h_group_size[9]),
-    //             dim3(CSRGEMM_DIM),
-    //             (csrgemm_nnz_block_per_row_shared_memory_size<CSRGEMM_HASHSIZE, J>()),
-    //             handle->stream,
-    //             &d_group_offset[9],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             info_C->csrgemm_info->mul,
-    //             info_C->csrgemm_info->add);
-    // #undef CSRGEMM_HASHSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
-    //     // Group 10: more than 65536 intermediate products or shared memory exceeded
-    //     if(h_group_size[10] > 0)
-    //     {
-    //         std::cout << "// Group 10: more than 65536 intermediate products or shared memory exceeded"
-    //                   << std::endl;
-    //         // Matrices B and D must be sorted in order to run this path
-    //         if(descr_B->storage_mode == rocsparse_storage_mode_unsorted
-    //            || (info_C->csrgemm_info->add ? descr_D->storage_mode == rocsparse_storage_mode_unsorted
-    //                                          : false))
-    //         {
-    //             return rocsparse_status_requires_sorted_storage;
-    //         }
-
-    // #define CSRGEMM_DIM 512
-    // #define CSRGEMM_SUB 16
-    // #define CSRGEMM_CHUNKSIZE 2048
-    //         I* workspace_B = nullptr;
-
-    //         if(info_C->csrgemm_info->mul == true)
-    //         {
-    //             // Allocate additional buffer for C = alpha * A * B
-    //             RETURN_IF_HIP_ERROR(
-    //                 rocsparse_hipMallocAsync((void**)&workspace_B, sizeof(I) * nnz_A, handle->stream));
-    //         }
-
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::
-    //                  csrgemm_nnz_block_per_row_multipass<CSRGEMM_DIM, CSRGEMM_SUB, CSRGEMM_CHUNKSIZE>),
-    //             dim3(h_group_size[10]),
-    //             dim3(CSRGEMM_DIM),
-    //             0,
-    //             stream,
-    //             n,
-    //             &d_group_offset[10],
-    //             d_perm,
-    //             csr_row_ptr_A,
-    //             csr_col_ind_A,
-    //             csr_row_ptr_B,
-    //             csr_col_ind_B,
-    //             csr_row_ptr_D,
-    //             csr_col_ind_D,
-    //             csr_row_ptr_C,
-    //             workspace_B,
-    //             base_A,
-    //             base_B,
-    //             base_D,
-    //             mul,
-    //             add);
-
-    //         if(info_C->csrgemm_info->mul == true)
-    //         {
-    //             RETURN_IF_HIP_ERROR(rocsparse_hipFreeAsync(workspace_B, handle->stream));
-    //         }
-    // #undef CSRGEMM_CHUNKSIZE
-    // #undef CSRGEMM_SUB
-    // #undef CSRGEMM_DIM
-    //     }
-
     RETURN_IF_HIP_ERROR(hipFree(d_group_offset));
     RETURN_IF_HIP_ERROR(hipFree(d_perm));
-
-    // // Exclusive sum to obtain row pointers of C
-    // rocprim_buffer = reinterpret_cast<void*>(buffer);
-    // RETURN_IF_ROCSPARSE_ERROR((rocsparse::primitives::exclusive_scan_buffer_size<I, I>(
-    //     handle, static_cast<I>(descr_C->base), m + 1, &rocprim_size)));
-    // RETURN_IF_ROCSPARSE_ERROR(rocsparse::primitives::exclusive_scan(handle,
-    //                                                                 csr_row_ptr_C,
-    //                                                                 csr_row_ptr_C,
-    //                                                                 static_cast<I>(descr_C->base),
-    //                                                                 m + 1,
-    //                                                                 rocprim_size,
-    //                                                                 rocprim_buffer));
-
-    // // Store nnz of C
-    // if(handle->pointer_mode == rocsparse_pointer_mode_device)
-    // {
-    //     RETURN_IF_HIP_ERROR(
-    //         hipMemcpyAsync(nnz_C, csr_row_ptr_C + m, sizeof(I), hipMemcpyDeviceToDevice, stream));
-
-    //     // Adjust nnz by index base
-    //     if(descr_C->base == rocsparse_index_base_one)
-    //     {
-    //         RETURN_IF_HIPLAUNCHKERNELGGL_ERROR(
-    //             (rocsparse::csrgemm_index_base<1>), dim3(1), dim3(1), 0, stream, nnz_C);
-    //     }
-    // }
-    // else
-    // {
-    //     RETURN_IF_HIP_ERROR(hipMemcpyAsync(
-    //         nnz_C, csr_row_ptr_C + m, sizeof(I), hipMemcpyDeviceToHost, handle->stream));
-    //     RETURN_IF_HIP_ERROR(hipStreamSynchronize(handle->stream));
-
-    //     // Adjust nnz by index base
-    //     *nnz_C -= descr_C->base;
-    // }
 
     return rocsparse_status_success;
 }

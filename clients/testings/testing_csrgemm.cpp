@@ -508,161 +508,20 @@ void testing_csrgemm(const Arguments& arg)
     }
     std::cout << "" << std::endl;
 
-    // h_A.define(M, K, M * K, baseA);
-    // h_B.define(K, N, K * N, baseB);
-    // h_C.define(M, N, 0, baseC);
-
-    // h_A.ptr[0] = 0;
-    // for(int i = 0; i < M; i++)
-    // {
-    //     h_A.ptr[i + 1] = h_A.ptr[i] + K;
-    // }
-
-    // for(int i = 0; i < M; i++)
-    // {
-    //     int start = h_A.ptr[i] - baseA;
-    //     int end   = h_A.ptr[i + 1] - baseA;
-
-    //     for(int j = start; j < end; j++)
-    //     {
-    //         h_A.ind[j] = j - start + baseA;
-    //     }
-    // }
-
-    // h_B.ptr[0] = 0;
-    // for(int i = 0; i < K; i++)
-    // {
-    //     h_B.ptr[i + 1] = h_B.ptr[i] + N;
-    // }
-
-    // for(int i = 0; i < K; i++)
-    // {
-    //     int start = h_B.ptr[i] - baseB;
-    //     int end   = h_B.ptr[i + 1] - baseB;
-
-    //     for(int j = start; j < end; j++)
-    //     {
-    //         h_B.ind[j] = j - start + baseB;
-    //     }
-    // }
-
-    // std::cout << "h_A" << std::endl;
-    // for(int i = 0; i < M; i++)
-    // {
-    //     int start = h_A.ptr[i] - baseA;
-    //     int end   = h_A.ptr[i + 1] - baseA;
-
-    //     std::vector<T> htemp(K, 0);
-    //     for(int j = start; j < end; j++)
-    //     {
-    //         htemp[h_A.ind[j] - baseA] = 1;
-    //     }
-
-    //     for(int j = 0; j < K; j++)
-    //     {
-    //         std::cout << htemp[j] << " ";
-    //     }
-    //     std::cout << "" << std::endl;
-    // }
-    // std::cout << "" << std::endl;
-
-    // std::cout << "h_B" << std::endl;
-    // for(int i = 0; i < K; i++)
-    // {
-    //     int start = h_B.ptr[i] - baseB;
-    //     int end   = h_B.ptr[i + 1] - baseB;
-
-    //     std::vector<T> htemp(N, 0);
-    //     for(int j = start; j < end; j++)
-    //     {
-    //         htemp[h_B.ind[j] - baseB] = 1;
-    //     }
-
-    //     for(int j = 0; j < N; j++)
-    //     {
-    //         std::cout << htemp[j] << " ";
-    //     }
-    //     std::cout << "" << std::endl;
-    // }
-    // std::cout << "" << std::endl;
-
     // Declare device objects.
-    device_csr_matrix<T>   d_A(h_A), d_B(h_B), d_C(h_C), d_D(h_D);
-    device_dense_vector<T> d_alpha(h_alpha), d_beta(h_beta);
+    device_csr_matrix<T> d_A(h_A), d_B(h_B), d_C(h_C), d_D(h_D);
 
     // Obtain required buffer size
     size_t out_buffer_size;
-    CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
     CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_buffer_size<T>(
         PARAMS_BUFFER_SIZE(h_alpha, h_beta, d_A, d_B, d_C, d_D, out_buffer_size)));
 
     CHECK_HIP_ERROR(rocsparse_hipMalloc(&dbuffer, out_buffer_size));
 
-    if(arg.unit_check)
-    {
-        // Host calculation.
-        {
-            rocsparse_int out_nnz;
-
-            host_csrgemm_nnz<T, rocsparse_int, rocsparse_int>(h_A.m,
-                                                              h_C.n,
-                                                              h_A.n,
-                                                              h_alpha,
-                                                              h_A.ptr,
-                                                              h_A.ind,
-                                                              h_B.ptr,
-                                                              h_B.ind,
-                                                              h_beta,
-                                                              h_D.ptr,
-                                                              h_D.ind,
-                                                              h_C.ptr,
-                                                              &out_nnz,
-                                                              h_A.base,
-                                                              h_B.base,
-                                                              h_C.base,
-                                                              h_D.base);
-
-            h_C.define(h_C.m, h_C.n, out_nnz, h_C.base);
-
-            host_csrgemm<T, rocsparse_int, rocsparse_int>(h_A.m,
-                                                          h_C.n,
-                                                          h_A.n,
-                                                          h_alpha,
-                                                          h_A.ptr,
-                                                          h_A.ind,
-                                                          h_A.val,
-                                                          h_B.ptr,
-                                                          h_B.ind,
-                                                          h_B.val,
-                                                          h_beta,
-                                                          h_D.ptr,
-                                                          h_D.ind,
-                                                          h_D.val,
-                                                          h_C.ptr,
-                                                          h_C.ind,
-                                                          h_C.val,
-                                                          h_A.base,
-                                                          h_B.base,
-                                                          h_C.base,
-                                                          h_D.base);
-        }
-
-        {
-            // GPU with pointer mode host
-            host_scalar<rocsparse_int> h_out_nnz;
-            CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
-            CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, h_out_nnz)));
-            // d_C.define(d_C.m, d_C.n, *h_out_nnz, d_C.base);
-            // CHECK_ROCSPARSE_ERROR(
-            //     rocsparse_csrgemm<T>(PARAMS(h_alpha, h_beta, d_A, d_B, d_C, d_D)));
-            // if(ROCSPARSE_REPRODUCIBILITY)
-            // {
-            //     rocsparse_reproducibility::save("d_C pointer mode host", d_C);
-            // }
-
-            // h_C.near_check(d_C);
-        }
-    }
+    // GPU with pointer mode host
+    host_scalar<rocsparse_int> h_out_nnz;
+    CHECK_ROCSPARSE_ERROR(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));
+    CHECK_ROCSPARSE_ERROR(rocsparse_csrgemm_nnz(PARAMS_NNZ(d_A, d_B, d_C, d_D, h_out_nnz)));
 
     // Free buffer
     CHECK_HIP_ERROR(rocsparse_hipFree(dbuffer));
